@@ -9,23 +9,29 @@ import torch.optim as optim
 import numpy as np
 from torch.autograd import Variable
 
-from ctextgen.dataset import *
+from ctextgen.datasets import *
 from ctextgen.model import RNN_VAE
 
 import argparse
-
+import logging
 
 parser = argparse.ArgumentParser(
     description='Conditional Text Generation: Train VAE as in Bowman, 2016, with c ~ p(c)'
 )
 
+parser.add_argument('--dataset', default='SST', help='string of the dataset name')
+parser.add_argument('--data_path', default=None,
+                    help='string of the path of the dataset')
 parser.add_argument('--gpu', default=False, action='store_true',
                     help='whether to run in the GPU')
 parser.add_argument('--save', default=False, action='store_true',
                     help='whether to save model or not')
+parser.add_argument('--save_path', default='models/',
+                    help='string of path to save the model')
 
 args = parser.parse_args()
 
+logging.basicConfig(filename=args.dataset+'.log',level=logging.DEBUG)
 
 mb_size = 32
 z_dim = 20
@@ -37,7 +43,13 @@ log_interval = 1000
 z_dim = h_dim
 c_dim = 2
 
-dataset = SST_Dataset()
+if args.dataset == 'SST':
+    dataset = SST_Dataset()
+elif 'GYAFC' in args.dataset:
+    dataset = GYAFC_Dataset(data_path=args.data_path)
+else:
+    logger.error('unrecognized dataset: {}'.format(args.dataset))
+    sys.exit(-1)
 
 model = RNN_VAE(
     dataset.n_vocab, h_dim, z_dim, c_dim, p_word_dropout=0.3,
@@ -45,13 +57,13 @@ model = RNN_VAE(
     gpu=args.gpu
 )
 
-
 def main():
     # Annealing for KL term
-    kld_start_inc = 3000
-    kld_weight = 0.01
-    kld_max = 0.15
-    kld_inc = (kld_max - kld_weight) / (n_iter - kld_start_inc)
+    kld_start_inc = 3000 # number of iters that we start to include KL divergence
+    kld_weight = 0.01 # staring weight
+    kld_max = 0.15 # max(final) weight
+    kld_inc = (kld_max - kld_weight) / (n_iter - kld_start_inc) # increased KL
+                                                                # weight
 
     trainer = optim.Adam(model.vae_params, lr=lr)
 
@@ -89,21 +101,20 @@ def main():
             param_group['lr'] = new_lr
 
 
-def save_model():
-    if not os.path.exists('models/'):
-        os.makedirs('models/')
+def save_model(args):
+    if not os.path.exists(args.save_path):
+        os.makedirs(args.save_path)
 
-    torch.save(model.state_dict(), 'models/vae.bin')
-
+    torch.save(model.state_dict(), os.path.join(args.save_path,
+                'vae_{}.bin'.format(args.dataset)))
 
 if __name__ == '__main__':
     try:
         main()
     except KeyboardInterrupt:
         if args.save:
-            save_model()
-
+            save_model(args)
         exit(0)
 
     if args.save:
-        save_model()
+        save_model(args)

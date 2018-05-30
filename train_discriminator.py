@@ -9,7 +9,7 @@ import torch.optim as optim
 import numpy as np
 from torch.autograd import Variable
 
-from ctextgen.dataset import *
+from ctextgen.datasets import *
 from ctextgen.model import RNN_VAE
 
 import argparse
