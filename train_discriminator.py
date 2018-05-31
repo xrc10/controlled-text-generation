@@ -20,13 +20,26 @@ parser = argparse.ArgumentParser(
     description='Conditional Text Generation: Train Discriminator'
 )
 
+parser.add_argument('--dataset', default='SST', help='string of the dataset name')
+parser.add_argument('--data_path', default=None,
+                    help='string of the path of the dataset')
 parser.add_argument('--gpu', default=False, action='store_true',
                     help='whether to run in the GPU')
 parser.add_argument('--save', default=False, action='store_true',
                     help='whether to save model or not')
+parser.add_argument('--save_path', default='models/',
+                    help='string of path to save the model')
 
 args = parser.parse_args()
 
+if args.save_path is not None and not os.path.exists(args.save_path):
+    os.makedirs(args.save_path)
+
+logging.basicConfig(filename=os.path.join(args.save_path,
+                    args.dataset+'.discriminator.log'),
+                    format='%(asctime)s %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p',
+                    level=logging.DEBUG, filemode='w')
 
 mbsize = 20
 z_dim = 20
@@ -45,7 +58,13 @@ lambda_c = 0.1
 lambda_z = 0.1
 lambda_u = 0.1
 
-dataset = SST_Dataset(mbsize=mbsize)
+if args.dataset == 'SST':
+    dataset = SST_Dataset()
+elif 'GYAFC' in args.dataset:
+    dataset = GYAFC_Dataset(data_path=args.data_path)
+else:
+    logger.error('unrecognized dataset: {}'.format(args.dataset))
+    sys.exit(-1)
 
 model = RNN_VAE(
     dataset.n_vocab, h_dim, z_dim, c_dim, p_word_dropout=0.3,
@@ -54,8 +73,8 @@ model = RNN_VAE(
 )
 
 # Load pretrained base VAE with c ~ p(c)
-model.load_state_dict(torch.load('models/vae.bin'))
-
+model.load_state_dict(torch.load(os.path.join(args.save_path,
+                'vae_{}.bin'.format(args.dataset))))
 
 def kl_weight(it):
     """
@@ -150,11 +169,9 @@ def main():
             print()
 
 
-def save_model():
-    if not os.path.exists('models/'):
-        os.makedirs('models/')
-
-    torch.save(model.state_dict(), 'models/ctextgen.bin')
+def save_model(args):
+    torch.save(model.state_dict(), os.path.join(args.save_path,
+                'discriminator_{}.bin'.format(args.dataset)))
 
 
 if __name__ == '__main__':
@@ -162,9 +179,9 @@ if __name__ == '__main__':
         main()
     except KeyboardInterrupt:
         if args.save:
-            save_model()
+            save_model(args)
 
         exit(0)
 
     if args.save:
-        save_model()
+        save_model(args)

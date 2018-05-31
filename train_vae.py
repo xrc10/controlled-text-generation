@@ -31,7 +31,14 @@ parser.add_argument('--save_path', default='models/',
 
 args = parser.parse_args()
 
-logging.basicConfig(filename=args.dataset+'.log',level=logging.DEBUG)
+if args.save_path is not None and not os.path.exists(args.save_path):
+    os.makedirs(args.save_path)
+
+logging.basicConfig(filename=os.path.join(args.save_path,
+                    args.dataset+'.vae.log'),
+                    format='%(asctime)s %(message)s',
+                    datefmt='%m/%d/%Y %I:%M:%S %p',
+                    level=logging.DEBUG, filemode='w')
 
 mb_size = 32
 z_dim = 20
@@ -102,9 +109,6 @@ def main():
 
 
 def save_model(args):
-    if not os.path.exists(args.save_path):
-        os.makedirs(args.save_path)
-
     torch.save(model.state_dict(), os.path.join(args.save_path,
                 'vae_{}.bin'.format(args.dataset)))
 
