@@ -201,7 +201,7 @@ class RNN_VAE(nn.Module):
         """
         Params:
         -------
-        sentence: sequence of word indices.
+        sentence: sequence of word indices. (seq_len x mbsize)
         use_c_prior: whether to sample `c` from prior or from `discriminator`.
 
         Returns:
@@ -215,7 +215,7 @@ class RNN_VAE(nn.Module):
 
         # sentence: '<start> I want to fly <eos>'
         # enc_inputs: '<start> I want to fly <eos>'
-        # dec_inputs: '<start> I want to fly <eos>'
+        # dec_inputs: '<start> I want to fly <eos>' -- teacher forcing
         # dec_targets: 'I want to fly <eos> <pad>'
         pad_words = Variable(torch.LongTensor([self.PAD_IDX])).repeat(1, mbsize)
         pad_words = pad_words.cuda() if self.gpu else pad_words
@@ -223,6 +223,7 @@ class RNN_VAE(nn.Module):
         enc_inputs = sentence
         dec_inputs = sentence
         dec_targets = torch.cat([sentence[1:], pad_words], dim=0)
+        # (seq_len x mbsize)
 
         # Encoder: sentence -> z
         mu, logvar = self.forward_encoder(enc_inputs)
