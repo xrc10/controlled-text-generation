@@ -249,15 +249,18 @@ class RNN_VAE(nn.Module):
         Generate sentences of (mbsize x max_sent_len)
         """
         samples = []
+        labels = []
 
         for _ in range(mbsize):
             z = self.sample_z_prior(1)
             c = self.sample_c_prior(1)
             samples.append(self.sample_sentence(z, c, raw=True))
+            labels.append(c)
 
         X_gen = torch.cat(samples, dim=0)
+        c_gen = torch.cat(labels, dim=0)
 
-        return X_gen
+        return X_gen, labels
 
     def sample_sentence(self, z, c, raw=False, temp=1):
         """
@@ -292,7 +295,7 @@ class RNN_VAE(nn.Module):
             y = self.decoder_fc(output).view(-1)
             y = F.softmax(y/temp, dim=0)
 
-            idx = torch.multinomial(y)
+            idx = torch.multinomial(y, 1)
 
             word = Variable(torch.LongTensor([int(idx)]))
             word = word.cuda() if self.gpu else word

@@ -103,7 +103,7 @@ def main():
         """ Update discriminator, eq. 11 """
         batch_size = inputs.size(1)
 
-        x_gen = model.generate_sentences(batch_size)  # mbsize x 16
+        x_gen, labels_gen = model.generate_sentences(batch_size)  # mbsize x 16
 
         y_disc_real = model.forward_discriminator(inputs.transpose(0, 1))
         y_disc_fake = model.forward_discriminator(x_gen)
@@ -112,7 +112,8 @@ def main():
         entropy = -log_y_disc_fake.mean()
 
         loss_s = F.cross_entropy(y_disc_real, labels)
-        loss_u = F.cross_entropy(y_disc_fake, labels) + beta*entropy
+        loss_u = F.cross_entropy(y_disc_fake, labels_gen) + beta*entropy # there is
+        # bug here. The labels are not for x_gen.
 
         loss_D = loss_s + lambda_u*loss_u
 

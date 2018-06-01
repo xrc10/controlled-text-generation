@@ -13,4 +13,4 @@
 # python train_discriminator.py --save --gpu
 
 # basic evaluations, e.g. conditional generation and latent interpolation.
-python test.py --model ctextgen.bin --gpu
+python test.py --model ctextgen --gpu
