@@ -258,9 +258,9 @@ class RNN_VAE(nn.Module):
             labels.append(c)
 
         X_gen = torch.cat(samples, dim=0)
-        c_gen = torch.cat(labels, dim=0)
+        _, c_gen = torch.max(torch.cat(labels, dim=0), dim=1)
 
-        return X_gen, labels
+        return X_gen, c_gen
 
     def sample_sentence(self, z, c, raw=False, temp=1):
         """

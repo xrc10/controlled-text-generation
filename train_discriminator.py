@@ -99,12 +99,12 @@ def main():
 
     for it in tqdm(range(n_iter)):
         inputs, labels = dataset.next_batch(args.gpu)
-
+        # print("labels.size()", labels.size())
         """ Update discriminator, eq. 11 """
         batch_size = inputs.size(1)
 
         x_gen, labels_gen = model.generate_sentences(batch_size)  # mbsize x 16
-
+        # print("labels_gen.size()", labels_gen.size())
         y_disc_real = model.forward_discriminator(inputs.transpose(0, 1))
         y_disc_fake = model.forward_discriminator(x_gen)
 

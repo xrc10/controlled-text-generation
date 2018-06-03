@@ -10,7 +10,7 @@
 # python train_vae.py --save --gpu;
 
 # This will create `ctextgen.bin`. The discriminator is using Kim, 2014 [3] architecture and the training procedure is as in Hu, 2017 [1].
-# python train_discriminator.py --save --gpu
+python train_discriminator.py --save --gpu
 
 # basic evaluations, e.g. conditional generation and latent interpolation.
-python test.py --model ctextgen --gpu
+# python test.py --model ctextgen --gpu
