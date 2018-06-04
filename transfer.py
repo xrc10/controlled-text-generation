@@ -8,7 +8,7 @@ import torch.optim as optim
 import numpy as np
 from torch.autograd import Variable
 
-from ctextgen.dataset import SST_Dataset
+from ctextgen.datasets import *
 from ctextgen.model import RNN_VAE
 
 import argparse
@@ -56,37 +56,32 @@ model = RNN_VAE(
     gpu=args.gpu
 )
 
-if args.gpu:
-    model.load_state_dict(torch.load(os.path.join(args.save_path,
+
+model.load_state_dict(torch.load(os.path.join(args.save_path,
                     'discriminator_{}.bin'.format(args.dataset))))
-else:
-    model.load_state_dict(torch.load(os.path.join(args.save_path,
-                    'discriminator_{}.bin'.format(args.dataset))),
-                    map_location=lambda storage, loc: storage))
 
+def main():
+    f_pred_out = open(os.path.join(args.save_path, 'pred.txt'), 'w')
+    f_compare_out = open(os.path.join(args.save_path, 'pred.txt'), 'w')
+    trg_c = model.sample_c_prior(1)
+    # Generate target sample from the source z
+    trg_c[0, 0], trg_c[0, 1] = 0, 1
+    while 1:
+        test_batch = dataset.next_test_batch(args.gpu)
 
+        if test_batch is None:
+            break
 
+        src_inputs = test_batch[0]
+        src_z = model.forward_encoder(src_inputs)[0]
 
-# Samples latent and conditional codes randomly from prior
-z = model.sample_z_prior(1)
-c = model.sample_c_prior(1)
+        for i in range(src_z.size()[0]):
+            sample_idxs = model.sample_sentence(src_z[i,:], trg_c)
+            sample_sent = dataset.idxs2sentence(sample_idxs)
+            ori_sent = dataset.idxs2sentence(src_inputs[i].tolist())
 
-# Generate positive sample given z
-c[0, 0], c[0, 1] = 1, 0
+            f_pred_out.write("{}\n".format(sample_sent))
+            f_compare_out.write("{}\t{}\n".format(ori_sent, sample_sent))
 
-_, c_idx = torch.max(c, dim=1)
-sample_idxs = model.sample_sentence(z, c, temp=0.1)
-
-print('\nSentiment: {}'.format(dataset.idx2label(int(c_idx))))
-print('Generated: {}'.format(dataset.idxs2sentence(sample_idxs)))
-
-# Generate negative sample from the same z
-c[0, 0], c[0, 1] = 0, 1
-
-_, c_idx = torch.max(c, dim=1)
-sample_idxs = model.sample_sentence(z, c, temp=0.8)
-
-print('\nSentiment: {}'.format(dataset.idx2label(int(c_idx))))
-print('Generated: {}'.format(dataset.idxs2sentence(sample_idxs)))
-
-print()
+if __name__ == '__main__':
+    main()
