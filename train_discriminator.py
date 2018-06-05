@@ -14,6 +14,7 @@ from ctextgen.model import RNN_VAE
 
 import argparse
 from tqdm import tqdm
+import logging
 
 
 parser = argparse.ArgumentParser(
@@ -23,10 +24,14 @@ parser = argparse.ArgumentParser(
 parser.add_argument('--dataset', default='SST', help='string of the dataset name')
 parser.add_argument('--data_path', default=None,
                     help='string of the path of the dataset')
+parser.add_argument('--plain_data_path', default=None,
+                    help='string of the path of the plain dataset')
 parser.add_argument('--gpu', default=False, action='store_true',
                     help='whether to run in the GPU')
 parser.add_argument('--save', default=False, action='store_true',
                     help='whether to save model or not')
+parser.add_argument('--load_path', default='models/',
+                    help='string of path to load the pre-trained model')
 parser.add_argument('--save_path', default='models/',
                     help='string of path to save the model')
 
@@ -41,12 +46,12 @@ logging.basicConfig(filename=os.path.join(args.save_path,
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.DEBUG, filemode='w')
 
-mbsize = 20
+mbsize = 128
 z_dim = 20
 h_dim = 64
 lr = 1e-3
 lr_decay_every = 1000000
-n_iter = 5000
+n_iter = 2000
 log_interval = 100
 z_dim = h_dim
 c_dim = 2
@@ -59,9 +64,10 @@ lambda_z = 0.1
 lambda_u = 0.1
 
 if args.dataset == 'SST':
-    dataset = SST_Dataset()
+    dataset = SST_Dataset(mbsize=mbsize)
 elif 'GYAFC' in args.dataset:
-    dataset = GYAFC_Dataset(data_path=args.data_path)
+    dataset = GYAFC_Dataset(data_path=args.data_path, mbsize=mbsize,
+                            plain_data_path=args.plain_data_path)
 else:
     logger.error('unrecognized dataset: {}'.format(args.dataset))
     sys.exit(-1)
@@ -73,8 +79,8 @@ model = RNN_VAE(
 )
 
 # Load pretrained base VAE with c ~ p(c)
-model.load_state_dict(torch.load(os.path.join(args.save_path,
-                'vae_{}.bin'.format(args.dataset))))
+model.load_state_dict(torch.load(os.path.join(args.load_path,
+                'vae_Plain.bin'))) # always load plain model
 
 def kl_weight(it):
     """

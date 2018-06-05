@@ -40,20 +40,22 @@ logging.basicConfig(filename=os.path.join(args.save_path,
                     datefmt='%m/%d/%Y %I:%M:%S %p',
                     level=logging.DEBUG, filemode='w')
 
-mb_size = 32
+mb_size = 128
 z_dim = 20
 h_dim = 64
 lr = 1e-3
 lr_decay_every = 1000000
-n_iter = 20000
+n_iter = 100000
 log_interval = 1000
 z_dim = h_dim
 c_dim = 2
 
 if args.dataset == 'SST':
-    dataset = SST_Dataset()
+    dataset = SST_Dataset(mbsize=mb_size)
 elif 'GYAFC' in args.dataset:
-    dataset = GYAFC_Dataset(data_path=args.data_path)
+    dataset = GYAFC_Dataset(data_path=args.data_path, mbsize=mb_size)
+elif args.dataset == "Plain":
+    dataset = Plain_Dataset(data_path=args.data_path, mbsize=mb_size)
 else:
     logger.error('unrecognized dataset: {}'.format(args.dataset))
     sys.exit(-1)
@@ -66,7 +68,7 @@ model = RNN_VAE(
 
 def main():
     # Annealing for KL term
-    kld_start_inc = 3000 # number of iters that we start to include KL divergence
+    kld_start_inc = 10000 # number of iters that we start to include KL divergence
     kld_weight = 0.01 # staring weight
     kld_max = 0.15 # max(final) weight
     kld_inc = (kld_max - kld_weight) / (n_iter - kld_start_inc) # increased KL

@@ -8,7 +8,7 @@ import torch.optim as optim
 import numpy as np
 from torch.autograd import Variable
 
-from ctextgen.dataset import SST_Dataset
+from ctextgen.datasets import SST_Dataset
 from ctextgen.model import RNN_VAE
 
 import argparse
@@ -53,51 +53,55 @@ if args.gpu:
 else:
     model.load_state_dict(torch.load('models/{}.bin'.format(args.model), map_location=lambda storage, loc: storage))
 
-# Samples latent and conditional codes randomly from prior
-z = model.sample_z_prior(1)
-c = model.sample_c_prior(1)
+for _ in range(20):
 
-# Generate positive sample given z
-c[0, 0], c[0, 1] = 1, 0
+    # Samples latent and conditional codes randomly from prior
+    z = model.sample_z_prior(1)
+    c = model.sample_c_prior(1)
 
-_, c_idx = torch.max(c, dim=1)
-sample_idxs = model.sample_sentence(z, c, temp=0.1)
+    # Generate positive sample given z
+    c[0, 0], c[0, 1] = 1, 0
 
-print('\nSentiment: {}'.format(dataset.idx2label(int(c_idx))))
-print('Generated: {}'.format(dataset.idxs2sentence(sample_idxs)))
-
-# Generate negative sample from the same z
-c[0, 0], c[0, 1] = 0, 1
-
-_, c_idx = torch.max(c, dim=1)
-sample_idxs = model.sample_sentence(z, c, temp=0.8)
-
-print('\nSentiment: {}'.format(dataset.idx2label(int(c_idx))))
-print('Generated: {}'.format(dataset.idxs2sentence(sample_idxs)))
-
-print()
-
-# Interpolation
-c = model.sample_c_prior(1)
-
-z1 = model.sample_z_prior(1).view(1, 1, z_dim)
-z1 = z1.cuda() if args.gpu else z1
-
-z2 = model.sample_z_prior(1).view(1, 1, z_dim)
-z2 = z2.cuda() if args.gpu else z2
-
-# Interpolation coefficients
-alphas = np.linspace(0, 1, 5)
-
-print('Interpolation of z:')
-print('-------------------')
-
-for alpha in alphas:
-    z = float(1-alpha)*z1 + float(alpha)*z2
-
+    _, c_idx = torch.max(c, dim=1)
     sample_idxs = model.sample_sentence(z, c, temp=0.1)
-    sample_sent = dataset.idxs2sentence(sample_idxs)
 
-    print("{}".format(sample_sent))
+    print('\nSentiment: {}'.format(dataset.idx2label(int(c_idx))))
+    print('Generated: {}'.format(dataset.idxs2sentence(sample_idxs)))
 
-print()
+    # Generate negative sample from the same z
+    c[0, 0], c[0, 1] = 0, 1
+
+    _, c_idx = torch.max(c, dim=1)
+    sample_idxs = model.sample_sentence(z, c, temp=0.8)
+
+    print('\nSentiment: {}'.format(dataset.idx2label(int(c_idx))))
+    print('Generated: {}'.format(dataset.idxs2sentence(sample_idxs)))
+
+    print()
+
+for _ in range(20):
+
+    # Interpolation
+    c = model.sample_c_prior(1)
+
+    z1 = model.sample_z_prior(1).view(1, 1, z_dim)
+    z1 = z1.cuda() if args.gpu else z1
+
+    z2 = model.sample_z_prior(1).view(1, 1, z_dim)
+    z2 = z2.cuda() if args.gpu else z2
+
+    # Interpolation coefficients
+    alphas = np.linspace(0, 1, 5)
+
+    print('Interpolation of z:')
+    print('-------------------')
+
+    for alpha in alphas:
+        z = float(1-alpha)*z1 + float(alpha)*z2
+
+        sample_idxs = model.sample_sentence(z, c, temp=0.1)
+        sample_sent = dataset.idxs2sentence(sample_idxs)
+
+        print("{}".format(sample_sent))
+
+    print()
